@@ -10,10 +10,9 @@ import {
   Marker,
   InfoWindow,
 } from "@react-google-maps/api";
-import { motion } from "framer-motion"; // ✅ added
+import { motion } from "framer-motion";
 
 const LIBRARIES = ["places"];
-
 const MAP_CONTAINER_STYLE = { width: "100%", height: "420px" };
 const DEFAULT_ZOOM = 13;
 
@@ -24,16 +23,19 @@ const HunterDashboard = () => {
   const [jobs, setJobs] = useState([]);
   const [userLocation, setUserLocation] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
   const [error, setError] = useState("");
   const [selectedJob, setSelectedJob] = useState(null);
   const [showMap, setShowMap] = useState(false);
+
+  // ✅ NEW STATE (for UX like Swiggy/Zomato)
+  const [searched, setSearched] = useState(false);
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY || "",
     libraries: LIBRARIES,
   });
 
+  // 🔥 MAIN FUNCTION
   const findNearbyJobs = () => {
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by your browser.");
@@ -42,22 +44,26 @@ const HunterDashboard = () => {
 
     setLoading(true);
     setError("");
+    setSearched(false); // reset before search
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        const { latitude, longitude } = position.coords;
-        setUserLocation({ lat: latitude, lng: longitude });
-
         try {
-          const res = await getNearbyJobs(latitude, longitude);
-          setJobs(res.data.jobs);
-          setSearched(true);
+          const { latitude, longitude } = position.coords;
 
-          if (res.data.jobs.length > 0) {
-            setShowMap(true);
-          }
+          setUserLocation({ lat: latitude, lng: longitude });
+
+          const res = await getNearbyJobs(latitude, longitude);
+
+          const jobsData = res.data.jobs || res.data || [];
+
+          setJobs(jobsData);
+          setShowMap(true);
+          setSearched(true); // ✅ VERY IMPORTANT
         } catch (err) {
-          setError(err.response?.data?.message || "Failed to fetch nearby jobs.");
+          setError(
+            err.response?.data?.message || "Failed to fetch nearby jobs."
+          );
         } finally {
           setLoading(false);
         }
@@ -122,7 +128,28 @@ const HunterDashboard = () => {
           {error && <div className="alert alert-error">{error}</div>}
         </motion.div>
 
-        {/* MAP (UNCHANGED) */}
+        {/* ❌ NO JOBS MESSAGE (NEW UX FIX) */}
+        {searched && jobs.length === 0 && !loading && (
+          <motion.div
+            className="card"
+            style={{
+              textAlign: "center",
+              padding: "20px",
+              color: "#ff6b6b",
+              fontWeight: "500",
+              marginBottom: "20px",
+            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            ❌ No jobs found near your location <br />
+            <span style={{ fontSize: "13px", color: "#aaa" }}>
+              Try moving to a different location 📍
+            </span>
+          </motion.div>
+        )}
+
+        {/* MAP */}
         {showMap && isLoaded && userLocation && (
           <div className="map-container" style={{ marginBottom: 24 }}>
             <GoogleMap
