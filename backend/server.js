@@ -1,13 +1,10 @@
 // server.js
 // Main entry point for the Job Hunter backend API
+
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const dotenv = require("dotenv");
 const connectDB = require("./config/db");
-
-// Load environment variables from .env file
-dotenv.config();
 
 // Connect to MongoDB
 connectDB();
@@ -15,15 +12,27 @@ connectDB();
 const app = express();
 
 // ─── Middleware ───────────────────────────────────────────
-// Enable CORS so React frontend can communicate with this API
+
+// ✅ CORS setup (FIXED CLEAN VERSION)
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://job-hunter-app-lime.vercel.app"
+];
+
 app.use(
   cors({
-    origin: "http://localhost:3000", // React dev server
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
 
-// Parse incoming JSON request bodies
+// Parse JSON
 app.use(express.json());
 
 // ─── Routes ──────────────────────────────────────────────
